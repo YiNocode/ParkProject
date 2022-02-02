@@ -1,12 +1,8 @@
 <template>
-	<view class="screen">
-		
-		<form @submit="formSubmit">
-			<input class="input" name="username" placeholder="请输入用户名" />
-			<input class="input" name="password" placeholder="请输入密码" password=true/>
-			<button class="button" form-type="submit" >登录</button>
-		</form>
-		<navigator class="button"  url="../Register/Register"><button>注册</button></navigator>
+	<view>
+		<text>停车app</text>
+		<text>用户名{{username}}</text>
+		<button @click="LogOut">退出登录</button>
 	</view>
 </template>
 
@@ -14,105 +10,62 @@
 	export default {
 		data() {
 			return {
+				username:'',
 				token:'',
-				isSuccess:false,
-				latitude:0,
-				longitude:0,
+				
+				
 				
 			}
 		},
-		
 		onLoad() {
-
+			var that=this
+			uni.getStorage({
+				key:'userInfo',
+				fail() {
+					uni.redirectTo({
+						url:'../Login/Login'
+					})
+				},
+				success:function(res){
+					console.log('已登录')
+					that.username=JSON.parse(res.data)
+					console.log(that.username)
+					
+				}
+			})
+			uni.getStorage({
+				key:'token',
+				success:function(res){
+					console.log(res)
+					that.token=res.data
+					
+				}
+			})
 		},
 		methods: {
-			formSubmit:function(e){
-				console.log("ok");
+			LogOut(){
+				var that=this
+				console.log(this.token)
 				uni.request({
-					url:'http://47.97.90.35:8080/login',
-					method:'POST',
-					data:JSON.stringify(e.detail.value),
-					success: res => {
-						if(res.data.code=="200"){
-							uni.showToast({
-								title: '登录成功'
-							});
-							this.token=res.data.data.token;
-							this.isSuccess=true;
-							uni.getLocation({
-								success(res) {
-									uni.redirectTo({
-										url:'../Map/Map?data='+JSON.stringify({latitude:res.latitude,longitude:res.longitude}) ,
-										complete() {
-											console.log(res.latitude)
-											console.log(res.longitude)
-										}
-									})
-									
-								}
-							})	
-						}
-						else{
-							uni.showToast({
-								title: '请检查用户名或密码',
-								icon:"none"
-							});
-						}
-					},
-					fail() {
-						uni.showToast({
-							title:"网络错误，请检查网络"
-						})
+					url:'http://47.97.90.35:8080/logOut',
+					method:'GET',
+					header:{token:JSON.parse(that.token)},
+					success(res) {
+						console.log(res)
 					}
+
 				})
-				
-				console.log(this.token);
-			},
+				uni.clearStorage();
+				uni.redirectTo({
+					url:'../Login/Login',
+				})
+			}
 			
 			
-				
 		}
 	}
 </script>
 
 <style>
-	.content {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-	}
 
-	.logo {
-		height: 200rpx;
-		width: 200rpx;
-		margin-top: 200rpx;
-		margin-left: auto;
-		margin-right: auto;
-		margin-bottom: 50rpx;
-	}
-
-	.text-area {
-		display: flex;
-		justify-content: center;
-	}
-
-	.title {
-		font-size: 36rpx;
-		color: #8f8f94;
-	}
-	.input{
-		margin: 70rpx;
-	
-	}
-	
-	.screen{
-			
-	}
-	.button{
-		margin: 50rpx;
-		font:'Gill Sans', 
-		
-	}
-	
 </style>
