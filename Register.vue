@@ -1,17 +1,17 @@
 <template>
 	<view>
 		<uni-forms ref="form" :modelValue="formData" :rules="rules">
-			<uni-forms-item name="username">
+			<uni-forms-item style="margin: 50rpx;" name="username">
 				<input  v-model="formData.username" placeholder="请输入用户名"  />
 			</uni-forms-item>
-			<uni-forms-item name="password">
+			<uni-forms-item style="margin: 50rpx;" name="password">
 				<input  v-model="formData.password" placeholder="请输入密码" password=true/>
 			</uni-forms-item>
-			<uni-forms-item name="passwordConfirm">
+			<uni-forms-item style="margin: 50rpx;"  name="passwordConfirm">
 				<input  v-model="formData.passwordConfirm" placeholder="确认密码" password=true />
 			</uni-forms-item>
 		</uni-forms>
-		<button @click="submit">注册</button>
+		<button @click="submit" class="button">注册</button>
 	</view>
 </template>
 
@@ -88,6 +88,7 @@
 		},
 		methods: {
 			submit:function(){
+				var that = this
 				this.$refs.form.validate().then(res=>{
 					uni.request({
 						url:'http://47.97.90.35:8080/register',
@@ -100,14 +101,20 @@
 									title:'注册成功,正在登录',
 									icon:'none',
 								});
-								this.token=res.data.data.token;
-								this.isSuccess=true;
+								that.token=res.data.data.token;
 								uni.setStorage({
 									key:'userInfo',
 									data:JSON.stringify(res),
 									success() {
 										console.log('success');
 									}
+								})
+								uni.setStorage({
+									key:'token',
+									data:JSON.stringify(that.token)
+								})
+								uni.redirectTo({
+									url:'../Login/Login'
 								})
 							}
 							else{
@@ -137,5 +144,14 @@
 </script>
 
 <style>
-
+.button{
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		margin: 50rpx;
+		background-color: #55aaff;
+		font:'Gill Sans', 
+		
+		
+	}
 </style>
