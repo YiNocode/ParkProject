@@ -9,13 +9,23 @@
 				<uni-datetime-picker type="datetime" return-type="date" @change="setBegTime">选择停车开始时间\n{{begTime}}</uni-datetime-picker>
 				<uni-datetime-picker type="datetime" @change="setEndTime" return-type="date">选择停车结束时间\n{{endTime}}</uni-datetime-picker>			
 			<button @click="makeOrder">下单</button> -->
-			<button @click="orderView">查看订单</button>
-			<div v-for="item in currentOrder" :key="item.id">
-			{{ item.beginTime }}至{{item.endTime}} {{parkingLot[item.parkingLotId-1].description}} 
-				<text class="stautes"> {{status[item.cancelFlag]}}</text>
-			<button class="button" @click="orderOperate" :data-info='item'>{{operate[item.cancelFlag]}}</button>
-			</div>
 			
+			<uni-list>
+				<uni-list-item :title="username"  thumb="/static/R-C.jpeg"></uni-list-item>
+				<button style="color: #2979FF;" @click="orderView">我的订单</button>
+				<div  v-for="item in currentOrder" :key="item.id">
+				<uni-list-item>
+					<text slot="body">
+						预计开始时间：{{ item.beginTime }}
+						预计结束时间：{{item.endTime}} 
+					    地点：{{parkingLot[item.parkingLotId-1].description}}
+						当前状态：<text v-if="Date.parse(item.endTime) > new Date() " class="stautes"> {{status[item.cancelFlag]}}</text>
+								<text v-else> 已过期</text>
+					
+					<button v-if="Date.parse(item.endTime) > new Date() " class="button" @click="orderOperate" :data-info='item'>{{operate[item.cancelFlag]}}</button></text>
+				</uni-list-item>	
+				</div>
+			</uni-list>
 		</view>
 	</template>
 
@@ -31,7 +41,9 @@
 					currentOrder:[],
 					parkingLot:[],
 					status:['待使用','已取消'],
-					operate:['取消','删除']
+					operate:['取消预约','删除订单'],
+					username:'',
+					
 					
 				}
 			},
@@ -50,6 +62,13 @@
 					success(r) {
 						that.id=r.data
 						console.log(that.id)
+					}
+				})
+				uni.getStorage({
+					key:'username',
+					success(r)
+					{
+						that.username=r.data
 					}
 				})
 				
@@ -240,7 +259,7 @@
 		font:'Gill Sans', 
 	}
 	.stautes{
-		margin-left: 200rpx;
+		margin-left: 10rpx;
 		background-color:#ff0000;
 		color: #ffffff;
 		font:'Gill Sans', 
