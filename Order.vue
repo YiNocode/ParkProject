@@ -11,8 +11,9 @@
 			<button @click="makeOrder">下单</button> -->
 			<button @click="orderView">查看订单</button>
 			<div v-for="item in currentOrder" :key="item.id">
-			{{ item.beginTime }}至{{item.endTime}} {{parkingLot[item.parkingLotId].description}} {{status[item.cancelFlag]}}
-			<button @click="orderOperate" :data-info='item'>{{operate[item.cancelFlag]}}</button>
+			{{ item.beginTime }}至{{item.endTime}} {{parkingLot[item.parkingLotId-1].description}} 
+				<text class="stautes"> {{status[item.cancelFlag]}}</text>
+			<button class="button" @click="orderOperate" :data-info='item'>{{operate[item.cancelFlag]}}</button>
 			</div>
 			
 		</view>
@@ -24,47 +25,31 @@
 				return {
 					id:'',
 					token:'',
-					chargeRule:[],
-					distance:'',
 					description:'',
-					latitude:'',
-					longitude:'',
 					begTime:'',
 					endTime:'',
 					currentOrder:[],
 					parkingLot:[],
 					status:['待使用','已取消'],
-					operate:['取消','恢复'],
-					
-					
+					operate:['取消','删除']
 					
 				}
 			},
 			onLoad(e) {
 				var that = this
-				console.log(e)
-				let k = JSON.parse(e.parkInfo)
-				that.id=k.id
-				that.distance=k.distance
-				that.description=k.description
-				that.latitude=k.latitude
-				that.longitude=k.longitude
 				uni.getStorage({
 					key:'token',
 					success:function(r)
 					{
 						that.token = r.data
-						uni.request({
-							url:'http://47.97.90.35:8080/findChargeRuleByParkingLotId/'+k.id,
-							header:{token:JSON.parse(that.token)},
-							method:'GET',
-							success:function(res){
-								console.log(res.data.data)
-								that.chargeRule=res.data.data
-								
-							}
-						})
 						console.log('success')
+					}
+				})
+				uni.getStorage({
+					key:'userId',
+					success(r) {
+						that.id=r.data
+						console.log(that.id)
 					}
 				})
 				
@@ -112,20 +97,31 @@
 				orderView:function(){
 					var that = this
 					uni.request({
-						url:'http://47.97.90.35:8080/findAllParkingLot',
+						url:'http://47.97.90.35:8080/parkingLot/findAllParkingLot',
 						method:'GET',
 						header:{token:JSON.parse(that.token)},
 						success(res) {
 							that.parkingLot=res.data.data
+							that.parkingLot.sort(function(a,b){
+								return (a.parking_lot_id<b.parking_lot_id) ? -1 : (a.parking_lot_id>b.parking_lot_id) ? 1 :0;
+							})
+							console.log(that.parkingLot)
 						}
 					}),
 					uni.request({
-						url:'http://47.97.90.35:8080/findOrdersByUserId/9',
+						url:'http://47.97.90.35:8080/order/findOrdersByUserId/'+that.id,
 						method:'GET',
 						header:{token:JSON.parse(that.token)},
 						success(res) {
 							console.log(res)
 							that.currentOrder=res.data.data
+							if(that.currentOrder.length==0)
+							{
+								uni.showToast({
+									title:'您当前暂无订单',
+									icon:'none'
+								})
+							}
 						}
 						
 					})
@@ -136,77 +132,96 @@
 					var orderId = e.currentTarget.dataset.info.orderId
 					if(!e.currentTarget.dataset.info.cancelFlag)
 					{
-						
-						uni.request({
-							url:'http://47.97.90.35:8080/cancelOneOrderById/'+orderId,
-							method:'GET',
-							header:{token:JSON.parse(that.token)},
-							success(res) {
-								console.log(res)
-								if(res.data.code==200)
+						uni.showModal({
+								content:'确认要取消此订单吗',
+								success(res)
 								{
-									uni.showToast({
-										title:'取消成功'
-									}),
-									uni.request({
-										url:'http://47.97.90.35:8080/findOrdersByUserId/9',
-										method:'GET',
-										header:{token:JSON.parse(that.token)},
-										success(res) {
-											console.log(res)
-											that.currentOrder=res.data.data
-										}
-										
-									})
-									
+									if(res.confirm)
+									{
+										uni.request({
+											url:'http://47.97.90.35:8080/order/cancelOneOrderById/'+orderId,
+											method:'GET',
+											header:{token:JSON.parse(that.token)},
+											success(res) {
+												console.log(res)
+												if(res.data.code==200)
+												{
+													uni.showToast({
+														title:'取消成功'
+													}),
+													uni.request({
+														url:'http://47.97.90.35:8080/order/findOrdersByUserId/'+that.id,
+														method:'GET',
+														header:{token:JSON.parse(that.token)},
+														success(res) {
+															console.log(res)
+															that.currentOrder=res.data.data
+															console.log('已更新')
+														}
+														
+													})
+													
+												}
+											},
+											fail() {
+												uni.showToast({
+													title:'网络错误！',
+													icon:'error',
+												})
+												
+											}
+											
+											
+										})
+									}
 								}
-							},
-							fail() {
-								uni.showToast({
-									title:'网络错误！',
-									icon:'error',
-								})
-		
-							}
-							
-							
+								
 						})
+						
+						
 					}
 					else
 					{
-						uni.request({
-							url:'http://47.97.90.35:8080/restoreOneOrderById/'+orderId,
-							header:{token:JSON.parse(that.token)},
-							method:'GET',
-							success(res) {
-								console.log(res)
-								if(res.data.code==200)
+						uni.showModal({
+							content:'确认删除此订单信息吗？',
+							success(res){
+								if(res.confirm)
 								{
-									uni.showToast({
-										title:'恢复成功'
-									}),
 									uni.request({
-										url:'http://47.97.90.35:8080/findOrdersByUserId/9',
-										method:'GET',
+										url:'http://47.97.90.35:8080/order/deleteOrderById/'+orderId,
 										header:{token:JSON.parse(that.token)},
-										success(res) {
-											that.currentOrder=res.data.data
+										method:'DELETE',
+										success(res)
+										{
+											uni.showToast({
+												title:'删除成功'
+											}),
+											uni.request({
+												url:'http://47.97.90.35:8080/order/findOrdersByUserId/'+that.id,
+												method:'GET',
+												header:{token:JSON.parse(that.token)},
+												success(res) {
+													console.log(res)
+													that.currentOrder=res.data.data
+													console.log('已更新')
+												}
+												
+											})
+										},
+										fail() {
+											uni.showToast({
+												title:'删除失败',
+												icon:'error'
+											})
+											
 										}
-										
 									})
 								}
-								
-							},
-							fail() {
-								uni.showToast({
-									title:'网络错误！',
-									icon:'error',
-								})
-									
+	
 							}
-							
 						})
 					}
+			
 					
 				}
 				
@@ -216,5 +231,18 @@
 	</script>
 
 	<style>
-
+	.button{
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		margin: 50rpx;
+		background-color: #55aaff;
+		font:'Gill Sans', 
+	}
+	.stautes{
+		margin-left: 200rpx;
+		background-color:#ff0000;
+		color: #ffffff;
+		font:'Gill Sans', 
+	}
 	</style>
